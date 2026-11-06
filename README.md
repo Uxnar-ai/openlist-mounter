@@ -16,6 +16,8 @@
 
 不确定选哪个就用 rclone，想零安装就切 WebDAV。
 
+![管理页面](docs/screenshot.png)
+
 ---
 
 ## 安装
@@ -298,6 +300,7 @@ tools/icontest/      用 ExtractIconEx 验证图标（走系统真实路径）
 tools/resprobe/      用 FindResource 探测资源是否可被系统识别
 tools/pedump/        dump PE 头与节表
 tools/preview/       开发期假数据预览服务
+docs/screenshot.png  管理页面截图（README 引用）
 ```
 
 ## 依赖与致谢
