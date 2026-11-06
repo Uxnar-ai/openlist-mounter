@@ -1,0 +1,529 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>OpenList 盘符挂载</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1316 1024'><path d='M1082.8 0H232.9L0 500.7v500.6h1315.7V500.7z' fill='%235B9BF0'/><path d='M1214.8 900.4H100.9V543.5h1113.9z' fill='%233E78D2'/><path d='M706.3 648.1h147.5v147.5H706.3zM962.5 648.1h147.5v147.5H962.5z' fill='%235B9BF0'/></svg>">
+<style>
+*{box-sizing:border-box}
+:root{
+  --bg:#f4f6f9;--card:#fff;--fg:#171a1f;--muted:#6b7280;--line:#e6e9ef;
+  --brand:#5B9BF0;--accent:#2f6fed;--accent-fg:#fff;--soft:rgba(0,0,0,.035);
+  --ok:#0f7a44;--okbg:#e6f6ed;--bad:#bb2e25;--badbg:#fdecea;--warn:#946208;--warnbg:#fdf3e1;
+}
+@media (prefers-color-scheme:dark){
+  :root{
+    --bg:#0e1116;--card:#161b22;--fg:#e6e9ef;--muted:#8b95a5;--line:#242b35;
+    --brand:#5B9BF0;--accent:#4d86ff;--accent-fg:#fff;--soft:rgba(255,255,255,.05);
+    --ok:#3ddc97;--okbg:#123223;--bad:#ff7b72;--badbg:#3a1a18;--warn:#f0b429;--warnbg:#3a2c11;
+  }
+}
+body{margin:0;background:var(--bg);color:var(--fg);
+  font:14px/1.55 system-ui,-apple-system,"Segoe UI","Microsoft YaHei UI",sans-serif;
+  -webkit-font-smoothing:antialiased}
+.wrap{max-width:920px;margin:0 auto;padding:30px 20px 64px}
+header{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:20px;flex-wrap:wrap}
+.brand{display:flex;align-items:center;gap:12px;min-width:0}
+.logo{width:40px;height:31px;color:var(--brand);flex:none}
+h1{font-size:17px;margin:0;font-weight:650;letter-spacing:.2px}
+h2{font-size:12px;margin:0;font-weight:600;color:var(--muted)}
+.sub{margin:2px 0 0;font-size:12.5px;color:var(--muted)}
+.pills{display:flex;gap:8px;flex-wrap:wrap}
+.pill{font-size:11.5px;padding:3px 9px;border-radius:999px;border:1px solid var(--line);color:var(--muted);white-space:nowrap}
+.pill.ok{color:var(--ok);background:var(--okbg);border-color:transparent}
+.pill.bad{color:var(--bad);background:var(--badbg);border-color:transparent}
+.pill.warn{color:var(--warn);background:var(--warnbg);border-color:transparent}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px 18px;margin-bottom:16px}
+.card-h{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px;flex-wrap:wrap}
+.form{display:grid;grid-template-columns:2fr 1fr 1fr;gap:12px;margin-bottom:14px}
+label{display:flex;flex-direction:column;gap:6px;font-size:12px;color:var(--muted)}
+input,select{font:inherit;font-size:13.5px;padding:8px 10px;border-radius:8px;border:1px solid var(--line);
+  background:transparent;color:var(--fg);width:100%}
+input:focus,select:focus{outline:2px solid var(--accent);outline-offset:-1px;border-color:transparent}
+button{font:inherit;font-size:13px;padding:8px 14px;border-radius:8px;border:1px solid var(--line);
+  background:transparent;color:var(--fg);cursor:pointer;transition:border-color .12s,color .12s}
+button:hover:not(:disabled){border-color:var(--accent);color:var(--accent)}
+button:disabled{opacity:.45;cursor:default}
+button.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-fg)}
+button.primary:hover:not(:disabled){filter:brightness(1.08);color:var(--accent-fg)}
+button.small{padding:5px 11px;font-size:12.5px}
+.actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.msg{font-size:12.5px;color:var(--muted)}
+.msg.ok{color:var(--ok)}.msg.bad{color:var(--bad)}
+.banner{display:flex;align-items:center;justify-content:space-between;gap:14px;
+  background:var(--warnbg);color:var(--warn);border-radius:10px;padding:11px 14px;
+  margin-bottom:16px;font-size:12.5px;line-height:1.5}
+.banner button{flex:none;color:var(--warn);border-color:transparent;background:rgba(255,255,255,.08)}
+.banner button:hover{color:var(--warn);border-color:var(--warn)}
+.tablewrap{overflow-x:auto;margin:0 -4px}
+table{width:100%;border-collapse:collapse;font-size:13.5px}
+th{text-align:left;font-weight:500;font-size:11.5px;color:var(--muted);padding:0 10px 8px}
+td{padding:9px 10px;border-top:1px solid var(--line);vertical-align:middle}
+th.c,td.c{width:30px;padding-left:2px}
+th.dr,td.dr{width:82px}
+th.ch,td.ch{width:88px}
+th.cap,td.cap{width:76px}
+td.cap input{padding:5px 6px;font-size:12.5px;text-align:center}
+th.op,td.op{width:68px;text-align:right;padding-right:2px}
+td.name{font-weight:500;word-break:break-word}
+td select{padding:5px 7px;font-size:12.5px;width:auto;min-width:70px}
+.empty{color:var(--muted);font-size:13px;text-align:center;padding:24px 0;margin:0}
+pre{margin:0;padding:12px;border-radius:8px;background:var(--soft);
+  font:12px/1.65 ui-monospace,Consolas,"Cascadia Mono",monospace;max-height:210px;overflow:auto;
+  white-space:pre-wrap;word-break:break-all;color:var(--muted)}
+pre:empty::after{content:"暂无日志";opacity:.6}
+footer{display:flex;align-items:center;justify-content:space-between;gap:16px;
+  font-size:12.5px;color:var(--muted);padding:0 4px;flex-wrap:wrap}
+.switch{flex-direction:row;align-items:center;gap:8px;cursor:pointer;font-size:12.5px;color:var(--fg)}
+.switch input{width:auto;margin:0}
+.foot-info{font-family:ui-monospace,Consolas,monospace;font-size:11.5px}
+@media(max-width:680px){.form{grid-template-columns:1fr;gap:10px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="brand">
+      <svg class="logo" viewBox="0 0 1316 1024" aria-hidden="true">
+        <path d="M1082.806857 0H232.886857L0 500.662857v500.662857h1315.693714V500.662857z" fill="currentColor"/>
+        <path d="M1214.793143 900.388571H100.900571V543.451429h1113.892572z" fill="currentColor" opacity=".5"/>
+        <path d="M706.340571 648.118857h147.492572v147.492572h-147.492572zM962.486857 648.118857h147.492572v147.492572h-147.492572z" fill="currentColor"/>
+      </svg>
+      <div style="min-width:0">
+        <h1>OpenList 盘符挂载</h1>
+        <p class="sub" id="sub">正在连接本地服务…</p>
+      </div>
+    </div>
+    <div class="pills">
+      <span class="pill" id="pill-rclone">rclone</span>
+      <span class="pill" id="pill-wc">WebDAV</span>
+      <span class="pill" id="pill-elev">权限</span>
+    </div>
+  </header>
+
+  <div class="banner" id="banner" style="display:none">
+    <span>当前以普通权限运行。第一次挂载需要管理员授权，才能配置系统 WebDAV 客户端：允许 Basic 认证、解除单文件 50MB 限制、启动 WebClient 服务。</span>
+    <button class="small" id="btn-elevate">以管理员身份重启</button>
+  </div>
+
+  <section class="card">
+    <div class="card-h"><h2>服务器</h2></div>
+    <div class="form">
+      <label><span>WebDAV 地址</span>
+        <input id="url" placeholder="http://192.168.1.10:5244/dav" spellcheck="false" autocomplete="off"></label>
+      <label><span>用户名</span>
+        <input id="user" spellcheck="false" autocomplete="username"></label>
+      <label><span>密码</span>
+        <input id="pass" type="password" autocomplete="current-password"></label>
+    </div>
+    <div class="actions">
+      <button class="primary" id="btn-save">保存并扫描</button>
+      <button id="btn-scan">重新扫描</button>
+      <span class="msg" id="msg"></span>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="card-h">
+      <h2>目录 → 盘符</h2>
+      <div class="actions">
+        <button class="small" id="btn-mount-all">全部挂载</button>
+        <button class="small" id="btn-unmount-all">全部断开</button>
+      </div>
+    </div>
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th class="c"></th><th>目录</th><th class="dr">盘符</th><th class="ch">通道</th><th class="cap">容量</th><th>状态</th><th class="op"></th></tr></thead>
+        <tbody id="rows"></tbody>
+      </table>
+      <p class="empty" id="empty">还没有扫描到目录，填入地址后点「保存并扫描」。</p>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="card-h">
+      <h2>依赖组件</h2>
+      <div class="actions"><span class="msg" id="dep-msg"></span></div>
+    </div>
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th>组件</th><th>状态</th><th class="op"></th></tr></thead>
+        <tbody id="deps"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="card-h">
+      <h2>运行日志</h2>
+      <div class="actions"><button class="small" id="btn-clear">清屏</button></div>
+    </div>
+    <pre id="log"></pre>
+  </section>
+
+  <footer>
+    <label class="switch"><input type="checkbox" id="autostart"><span>开机自启动</span></label>
+    <div class="actions">
+      <button class="small" id="btn-refresh" title="让「此电脑」重新枚举驱动器，清掉残留的旧图标">刷新资源管理器</button>
+      <button class="small" id="btn-restart-exp" title="彻底重启 explorer，会关闭已打开的文件夹窗口">重启资源管理器</button>
+      <button class="small" id="btn-quit" title="结束后台进程并断开所有盘符">退出程序</button>
+      <span class="foot-info" id="foot"></span>
+    </div>
+  </footer>
+</div>
+
+<script>
+const token = new URLSearchParams(location.search).get('t') || '';
+const $ = s => document.querySelector(s);
+let sig = '';
+let quitting = false;
+
+async function api(path, body) {
+  const opt = { headers: { 'X-Token': token } };
+  if (body !== undefined) {
+    opt.method = 'POST';
+    opt.headers['Content-Type'] = 'application/json';
+    opt.body = JSON.stringify(body);
+  }
+  const r = await fetch(path, opt);
+  const txt = await r.text();
+  let data = {};
+  try { data = JSON.parse(txt); } catch (e) {}
+  if (!r.ok) throw new Error(data.error || txt || ('HTTP ' + r.status));
+  return data;
+}
+
+function flash(text, kind) {
+  const el = $('#msg');
+  el.textContent = text;
+  el.className = 'msg ' + (kind || '');
+  clearTimeout(flash._t);
+  flash._t = setTimeout(() => { el.textContent = ''; el.className = 'msg'; }, 7000);
+}
+
+async function refresh() {
+  if (quitting) return;
+  try {
+    render(await api('/api/state'));
+  } catch (e) {
+    $('#sub').textContent = '本地服务无响应：' + e.message;
+  }
+}
+
+function render(s) {
+  const mounted = s.folders.filter(f => f.mounted).length;
+  $('#sub').textContent = s.folders.length
+    ? `${mounted} / ${s.folders.length} 个目录已挂载`
+    : '等待扫描目录';
+
+  const pe = $('#pill-elev');
+  pe.textContent = s.elevated ? '管理员权限' : '普通权限';
+  pe.className = 'pill ' + (s.elevated ? 'ok' : 'warn');
+  $('#banner').style.display = s.elevated ? 'none' : 'flex';
+
+  const pw = $('#pill-wc');
+  pw.textContent = s.webclient ? 'WebDAV 客户端就绪' : 'WebDAV 客户端未启动';
+  pw.className = 'pill ' + (s.webclient ? 'ok' : 'warn');
+
+  const pr = $('#pill-rclone');
+  const rcloneOK = s.rclone_ready && s.winfsp_ready;
+  pr.textContent = rcloneOK ? 'rclone 就绪' : (s.rclone_ready ? 'rclone 待装驱动' : 'rclone 未下载');
+  pr.className = 'pill ' + (rcloneOK ? 'ok' : 'warn');
+  pr.title = rcloneOK ? 'rclone + WinFsp 已就绪' : '首次挂载会自动下载 rclone 并在管理员权限下安装 WinFsp';
+
+  if (document.activeElement !== $('#url')) $('#url').value = s.url || '';
+  if (document.activeElement !== $('#user')) $('#user').value = s.user || '';
+  $('#pass').placeholder = s.has_pass ? '已保存，留空不修改' : '';
+  $('#autostart').checked = !!s.auto_start;
+  $('#foot').textContent = '本地服务 127.0.0.1:' + s.port + (s.config_dir ? ' · 配置在 ' + s.config_dir : '');
+  $('#foot').title = s.config_dir ? '配置目录：' + s.config_dir : '';
+
+  renderDeps(s);
+
+  const next = JSON.stringify(s.folders.map(f => [f.name, f.drive, f.enabled, f.status, f.mounted, f.backend, f.capacity]));
+  if (next !== sig) { sig = next; renderRows(s); }
+
+  const log = $('#log');
+  const stick = log.scrollTop + log.clientHeight >= log.scrollHeight - 10;
+  log.textContent = s.logs.join('\n');
+  if (stick) log.scrollTop = log.scrollHeight;
+}
+
+function renderDeps(s) {
+  const d = s.deps;
+  const tb = $('#deps');
+  if (!d || !tb) return;
+
+  const rows = [
+    {
+      name: 'rclone',
+      sub: d.rclone_path || '',
+      ok: !!d.rclone_ok,
+      st: d.rclone_ok ? `已就绪 · ${d.rclone_mb} MB` : '未下载（首次挂载会自动下载）',
+      btns: d.rclone_ok
+        ? [{ t: '重新下载', a: 'rclone-reinstall' }, { t: '删除', a: 'rclone-remove' }]
+        : [{ t: '下载', a: 'rclone-reinstall' }],
+    },
+    {
+      name: 'WinFsp',
+      sub: 'Windows 文件系统驱动，rclone 通道必需',
+      ok: !!d.winfsp_ok,
+      st: d.winfsp_ok ? ('已安装 ' + (d.winfsp_version || '')).trim() : '未安装',
+      btns: d.winfsp_ok
+        ? [{ t: '重装', a: 'winfsp-install' }, { t: '卸载', a: 'winfsp-uninstall' }]
+        : [{ t: '安装', a: 'winfsp-install' }],
+    },
+  ];
+
+  tb.innerHTML = '';
+  for (const r of rows) {
+    const tr = document.createElement('tr');
+    const td1 = document.createElement('td');
+    td1.innerHTML = `<b>${r.name}</b><div class="sub" style="opacity:.6;font-size:12px">${r.sub}</div>`;
+    const td2 = document.createElement('td');
+    td2.innerHTML = `<span class="pill ${r.ok ? 'ok' : 'warn'}">${r.st}</span>`;
+    const td3 = document.createElement('td');
+    td3.className = 'op';
+    for (const b of r.btns) {
+      const btn = document.createElement('button');
+      btn.className = 'small';
+      btn.textContent = b.t;
+      btn.disabled = !!d.busy;
+      btn.addEventListener('click', async () => {
+        if (b.a === 'winfsp-uninstall' && !confirm('卸载 WinFsp 后 rclone 挂载会全部失效，确定？')) return;
+        if (b.a === 'rclone-remove' && !confirm('删除 rclone.exe 会断开所有 rclone 挂载，确定？')) return;
+        try {
+          const res = await api('/api/deps', { action: b.a });
+          $('#dep-msg').textContent = res.msg || '已开始';
+        } catch (e) {
+          $('#dep-msg').textContent = e.message;
+        }
+      });
+      td3.appendChild(btn);
+    }
+    tr.append(td1, td2, td3);
+    tb.appendChild(tr);
+  }
+}
+
+function renderRows(s) {
+  const tb = $('#rows');
+  tb.innerHTML = '';
+  $('#empty').style.display = s.folders.length ? 'none' : 'block';
+
+  for (const f of s.folders) {
+    const tr = document.createElement('tr');
+    tr.dataset.name = f.name;
+
+    const tdC = document.createElement('td');
+    tdC.className = 'c';
+    const cb = document.createElement('input');
+    cb.type = 'checkbox';
+    cb.checked = f.enabled;
+    cb.dataset.act = 'toggle';
+    cb.title = '勾选后下次启动自动挂载';
+    tdC.appendChild(cb);
+
+    const tdN = document.createElement('td');
+    tdN.className = 'name';
+    tdN.textContent = f.name;
+
+    const tdD = document.createElement('td');
+    tdD.className = 'dr';
+    const sel = document.createElement('select');
+    sel.dataset.act = 'drive';
+    const opts = [...new Set([f.drive, ...s.free_drives].filter(Boolean))].sort();
+    for (const d of opts) {
+      const o = document.createElement('option');
+      o.value = d; o.textContent = d;
+      if (d === f.drive) o.selected = true;
+      sel.appendChild(o);
+    }
+    tdD.appendChild(sel);
+
+    const tdCh = document.createElement('td');
+    tdCh.className = 'ch';
+    const bsel = document.createElement('select');
+    bsel.dataset.act = 'backend';
+    bsel.title = 'rclone 适合大文件与播放；WebDAV 零依赖但大文件慢';
+    for (const [val, text] of [['rclone', 'rclone'], ['webdav', 'WebDAV']]) {
+      const o = document.createElement('option');
+      o.value = val; o.textContent = text;
+      if (val === f.backend) o.selected = true;
+      bsel.appendChild(o);
+    }
+    tdCh.appendChild(bsel);
+
+    const tdCap = document.createElement('td');
+    tdCap.className = 'cap';
+    const capIn = document.createElement('input');
+    capIn.type = 'text';
+    capIn.value = f.capacity || '';
+    capIn.placeholder = '10T';
+    capIn.title = '盘符里显示的容量，如 2T / 500G。OpenList 不上报真实剩余空间，这里是你手填的显示值。';
+    capIn.dataset.act = 'capacity';
+    tdCap.appendChild(capIn);
+
+    const tdS = document.createElement('td');
+    const pill = document.createElement('span');
+    const busy = f.status && (f.status.includes('中…') || f.status.includes('连接中'));
+    const bad = f.status && !f.mounted && !busy && f.status !== '未挂载';
+    pill.className = 'pill ' + (f.mounted ? 'ok' : busy ? 'warn' : bad ? 'bad' : '');
+    pill.textContent = f.status || '未挂载';
+    tdS.appendChild(pill);
+
+    const tdO = document.createElement('td');
+    tdO.className = 'op';
+    const btn = document.createElement('button');
+    btn.className = 'small';
+    btn.dataset.act = f.mounted ? 'unmount' : 'mount';
+    btn.textContent = f.mounted ? '断开' : '挂载';
+    btn.disabled = !f.drive;
+    tdO.appendChild(btn);
+
+    tr.append(tdC, tdN, tdD, tdCh, tdCap, tdS, tdO);
+    tb.appendChild(tr);
+  }
+}
+
+$('#rows').addEventListener('click', async e => {
+  const act = e.target.dataset && e.target.dataset.act;
+  if (act !== 'mount' && act !== 'unmount') return;
+  const name = e.target.closest('tr').dataset.name;
+  e.target.disabled = true;
+  try {
+    await api('/api/' + act, { name });
+    flash((act === 'mount' ? '已挂载 ' : '已断开 ') + name, 'ok');
+  } catch (err) {
+    flash(err.message, 'bad');
+  }
+  e.target.disabled = false;
+  refresh();
+});
+
+$('#rows').addEventListener('change', async e => {
+  const act = e.target.dataset && e.target.dataset.act;
+  if (act !== 'toggle' && act !== 'drive' && act !== 'backend' && act !== 'capacity') return;
+  const name = e.target.closest('tr').dataset.name;
+  try {
+    if (act === 'toggle') await api('/api/folder', { name, enabled: e.target.checked });
+    else if (act === 'drive') await api('/api/folder', { name, drive: e.target.value });
+    else if (act === 'backend') await api('/api/folder', { name, backend: e.target.value });
+    else {
+      await api('/api/folder', { name, capacity: e.target.value });
+      if (e.target.value.trim()) flash('容量已保存，正在重新挂载使其生效');
+    }
+  } catch (err) {
+    flash(err.message, 'bad');
+  }
+  refresh();
+});
+
+$('#btn-save').addEventListener('click', async () => {
+  const url = $('#url').value.trim();
+  if (!url) { flash('请先填写 WebDAV 地址', 'bad'); return; }
+  $('#btn-save').disabled = true;
+  flash('正在连接并扫描…');
+  try {
+    await api('/api/server', { url, user: $('#user').value, pass: $('#pass').value });
+    $('#pass').value = '';
+    flash('扫描完成，正在后台挂载', 'ok');
+  } catch (e) {
+    flash(e.message, 'bad');
+  }
+  $('#btn-save').disabled = false;
+  refresh();
+});
+
+$('#btn-scan').addEventListener('click', async () => {
+  flash('正在重新扫描…');
+  try { await api('/api/scan'); flash('扫描完成', 'ok'); }
+  catch (e) { flash(e.message, 'bad'); }
+  refresh();
+});
+
+$('#btn-mount-all').addEventListener('click', async () => {
+  try { await api('/api/mount-all'); flash('已开始挂载勾选的目录'); }
+  catch (e) { flash(e.message, 'bad'); }
+  refresh();
+});
+
+$('#btn-unmount-all').addEventListener('click', async () => {
+  try { await api('/api/unmount-all'); flash('已断开全部'); }
+  catch (e) { flash(e.message, 'bad'); }
+  refresh();
+});
+
+$('#autostart').addEventListener('change', async e => {
+  try { await api('/api/autostart', { enabled: e.target.checked }); }
+  catch (err) { flash(err.message, 'bad'); e.target.checked = !e.target.checked; }
+});
+
+$('#btn-clear').addEventListener('click', () => { $('#log').textContent = ''; });
+
+$('#btn-elevate').addEventListener('click', async () => {
+  try {
+    const r = await api('/api/elevate', {});
+    flash(r.msg || '正在请求管理员权限…', 'ok');
+  } catch (e) {
+    flash(e.message, 'bad');
+  }
+});
+
+$('#btn-refresh').addEventListener('click', async () => {
+  try {
+    const r = await api('/api/refresh', {});
+    flash(r.msg, 'ok');
+  } catch (e) {
+    flash(e.message, 'bad');
+  }
+});
+
+$('#btn-restart-exp').addEventListener('click', async () => {
+  if (!confirm('重启资源管理器会关闭所有已打开的文件夹窗口，确定继续？')) return;
+  try {
+    const r = await api('/api/refresh', { restart: true });
+    flash(r.msg, 'ok');
+  } catch (e) {
+    flash(e.message, 'bad');
+  }
+});
+
+$('#btn-quit').addEventListener('click', async () => {
+  if (!confirm('退出后所有盘符会断开，确定退出？')) return;
+  try {
+    await api('/api/quit', {});
+  } catch (e) {
+    flash(e.message, 'bad');
+    return;
+  }
+  // 200 只代表「请求收下了」，进程可能还活着（清理 rclone 要几秒）。
+  // 必须等到接口真的不可达，才能说退出成功——之前拿到 200 就宣布退出，是在撒谎。
+  quitting = true;
+  document.querySelectorAll('button').forEach(b => b.disabled = true);
+  $('#sub').textContent = '正在退出，等待后台进程结束…';
+  const deadline = Date.now() + 20000;
+  let fails = 0;
+  while (Date.now() < deadline) {
+    await new Promise(r => setTimeout(r, 500));
+    try {
+      await api('/api/state');
+      fails = 0;
+    } catch (e) {
+      if (++fails >= 2) {
+        $('#sub').textContent = '程序已退出，可以关闭这个页面了';
+        return;
+      }
+    }
+  }
+  quitting = false;
+  document.querySelectorAll('button').forEach(b => b.disabled = false);
+  $('#sub').textContent = '退出超时：后台进程还在跑，请到任务管理器结束 OpenListMounter.exe';
+});
+
+refresh();
+setInterval(refresh, 1500);
+</script>
+</body>
+</html>

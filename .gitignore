@@ -1,0 +1,23 @@
+# 构建产物
+/build/
+*.exe
+*.syso
+olm_staging.exe
+
+# 运行期文件（含本机服务器地址与 DPAPI 密文，绝不入库）
+config.json
+config.json.bad-*
+rclone.conf
+log.txt
+rclone.exe
+
+# 开发期截图 / 缓存
+/preview/
+*.log
+
+# 编辑器 / 系统
+.vscode/
+.idea/
+*.swp
+Thumbs.db
+desktop.ini
